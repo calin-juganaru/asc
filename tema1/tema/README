@@ -1,0 +1,21 @@
+@Consumer:
+        Pentru fiecare acțiune din fiecare coș de cumpărături, consumatorul
+    încearcă să o realizeze. Dacă acțiunea a fost una de adăugare și produsul
+    cerut nu exista în stoc, acesta va aștepta un timp dat și va reîncerca.
+    La finalul listei de comenzi asociată coșului acesta va plasa comanda.
+
+@Producer:
+        Daemon-ul producătorului va încerca să-și publice produsele în ordinea
+    listei date, și, dacă nu reusește să-l adauge pe cel curent, așteaptă un
+    timp dat și reîncearcă.
+
+@Marketplace:
+        Pentru generarea de id-uri pentru coșuri și producători am folosit câte
+    o variabilă internă clasei care pornește de la 0 și se va incrementa la
+    fiecare apel de funcție register_producer() sau new_cart(). Funcțiile de
+    adăugare produs în coș sau publicare produs sunt thread-safe prin folosirea
+    a două semafoare (unul pentru producători și unul pentru consumatori), dar
+    și clasa dict din python este implementată thread-safe. De asemenea, pentru
+    fiecare producător am reținut câte un contor al produselor publicate și aflate
+    în stoc, ce va crește la fiecare publicare sau returnare de produs și va scădea
+    la fiecare adăugare în coș.

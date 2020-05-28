@@ -1,0 +1,135 @@
+-------------------------------------------------------------------------------
+
+    Pentru rezolvarea temei am creat clasa matrix, cu operatorul de adunare și
+două metode de înmulțire a matricilor supraîncărcate diferit pentru fiecare
+variantă a algoritmului. Astfel, rezultatul așteptat va fi:
+    C = B.înmulțit_cu(A.transpus()) + A.la_pătrat().înmulțit_cu(B)
+
+-------------------------------------------------------------------------------
+
+@neopt:
+    Această variantă implementează simplu și direct adunarea, înmulțirea și
+transpunerea matricilor. Singura optimizare de calcul este aceea că țin cont
+de faptul că A este o matrice superior triunghiulară (deci transpusa ei va fi
+inferior triunghiulară, iar pătratul său va fi tot superior triunghiulară,
+conform unei teoreme), deci evit calculele inutile de pe pozițiile în care
+va fi mereu valoarea 0. De accea am implementat metodele multiply1() și
+multiply2(), pentru că țin cont că al doilea parametru de la prima, A', este
+inferior triunghiulară, respectiv, primul parametru de la ce din urmă, A la
+pătrat, este superior triunghiulară.
+
+ N=400:  Time=0.803924
+ N=500:  Time=1.482355
+ N=600:  Time=2.571910
+ N=700:  Time=4.023327
+ N=800:  Time=6.062050
+ N=900:  Time=8.558664
+ N=1000: Time=11.580652
+ N=1100: Time=15.723156
+ N=1200: Time=20.102955
+
+-------------------------------------------------------------------------------
+
+@blas:
+    Folosind funcțiile dtrmm() pentru înmulțire și daxpy() pentru adunare, din
+biblioteca cblas, am supraîncărcat metodele clasei, înlocuind operațiile făcute
+manual.
+
+ N=400:  Time=0.055186
+ N=500:  Time=0.079524
+ N=600:  Time=0.098375
+ N=700:  Time=0.148345
+ N=800:  Time=0.249132
+ N=900:  Time=0.300713
+ N=1000: Time=0.405640
+ N=1100: Time=0.549388
+ N=1200: Time=0.693424
+
+-------------------------------------------------------------------------------
+
+@opt_m:
+    Pentru a reduce la extrem timpul de execuție al programului exclusiv prin
+modificarea algoritmului, am marcat toate obiectele ca register, am înlocuit
+accesarea celulelor din matrici prin operatorul [] cu accesarea prin pointeri
+incrementați la fiecare pas (cu 1 sau N) și am schimbat ordinea buclelor de la
+ordinea i-j-k la i-k-j.
+
+ N=400:  Time=0.193202
+ N=500:  Time=0.291045
+ N=600:  Time=0.497348
+ N=700:  Time=0.779964
+ N=800:  Time=1.156880
+ N=900:  Time=1.642699
+ N=1000: Time=2.237875
+ N=1100: Time=2.972140
+ N=1200: Time=3.586991
+
+-------------------------------------------------------------------------------
+
+@opt_f:
+    Codul este identic cu cel de la @neopt, dar este compilat cu flag-ul -O3.
+
+ N=400:  Time=0.175619
+ N=500:  Time=0.199846
+ N=600:  Time=0.368377
+ N=700:  Time=0.646715
+ N=800:  Time=1.110594
+ N=900:  Time=1.383689
+ N=1000: Time=1.930265
+ N=1100: Time=2.515020
+ N=1200: Time=3.361452
+
+-------------------------------------------------------------------------------
+
+@opt_f_extra:
+    Codul este identic cu cel de la @neopt, dar este compilat cu flag-urile
+de la @opt_f plus -ffast-math, -fno-trapping-math, -fno-signed-zeros,
+-ffinite-math-only și -funsafe-math-optimizations pentru optimizarea
+operațiilor aritmetice (cu condiția ca acestea să nu aibă comportament
+neobișnuit, precum overflow, împărțire la 0 sau valori infinite), și
+-funroll-loops pentru a face loop unrolling atunci când este cunoscut
+numărul de iterații printr-o buclă for la intrarea în ea, la compilare
+sau la execuție. Ultima optimizare este aplicabilă pentru toate buclele
+din algoritmul meu deoarece nu am în program structuri de genul
+    "for (...) if (condiție) break",
+ci întotdeauna va itera de la 0 la N / de la i la N / de la 0 la j /etc.
+
+ N=400: Time=0.149564
+ N=500: Time=0.163531
+ N=600: Time=0.491946
+ N=700: Time=0.519238
+ N=800: Time=0.966405
+ N=900: Time=1.243190
+ N=1000: Time=1.734722
+ N=1100: Time=2.329752
+ N=1200: Time=3.203181
+
+-------------------------------------------------------------------------------
+
+    Concluzii:
+        Pentru testarea corectitudinii algoritmilor am folosit cele 3 teste și
+    utilitarul compare din schelet, iar pentru testarea timpilor de execuție am
+    generat 9 teste (cu valorie de mai sus, de la 400 la 1200, cu pasul de 100),
+    apoi am rulat fiecare program de câte 10 ori și am calculat timpii medii de
+    execuție trecuți mai sus la fiecare algoritm în parte.
+        Cu utilitarul GNU Octave am obținut și un grafic al celor 5 curbe,
+    reprezentând timpii medii, din care putem observa o creștere exponențială a
+    celui neoptimizat, de la 0.8 la puțin peste 20 de secunde, pe când cei
+    optimizați au o creștere aproximativ liniară, cu panta destul de mică,
+    pornind de la mai puțin de 0.2 secunde și ajungând până la maxim 3.6
+    secunde.
+        Dintre aceștia 3, cel mai bun pare să fie cel cu flag-urile extra,
+    unde am obligat compilatorul să facă optimizări pe operațiile aritmetice și
+    pe bucle, adică exact marea majoritate a operațiilor din program, dar fără
+    să modific cu nimic algoritmul de bază. Următorul în clasament este cel cu
+    optimizarea -O3, cel mai agresiv set de optimizări al compilatorului gcc,
+    dar care face niște optimizări generale, neținând cont de conținutul
+    programului, ca în cazul de față, unde operațiile sunt aritmetice, bucle
+    și aritmetică de pointeri.
+        De departe, cel mai eficient algoritm este cel care folosește biblioteca
+    blas, cu o pantă extrem de mică, pornind de la 0.05 secunde și ajungând sub
+    0.7 secunde. Din această bibliotecă, tutuși, am folosit doar o funcție de
+    înmulțire și una de adunare a matricilor, având suport pentru transpunere
+    și operații cu matrici triunghiulare, dar s-a dovedit a fi cea mai eficientă.
+
+-------------------------------------------------------------------------------
